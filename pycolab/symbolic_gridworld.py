@@ -84,10 +84,10 @@ MAZES_ART = [
     ['#########################################################################################',
      '#                                                                                       #',
      '#                                                                                       #',
-     '#                                                                                       #',
-     '#                                                                                       #',
-     '#                                                                                       #',
      '#       @                                                                               #',
+     '#                                                                                       #',
+     '#                                                                                       #',
+     '#                                                                                       #',
      '#                                                                                       #',
      '#                                                                                       #',
      '#       P                                                                               #',
@@ -337,7 +337,7 @@ class PatrollerSprite(prefab_sprites.LargerObject):
     if self.is_colliding(things['P']): the_plot.terminate_episode()
 
 
-class CashDrape(plab_things.Drape, plab_things.Collidable):
+class CashDrape(plab_things.LargeDrape, plab_things.Collidable):
   """A `Drape` handling all of the coins.
 
   This Drape detects when a player traverses a coin, removing the coin and
@@ -346,7 +346,7 @@ class CashDrape(plab_things.Drape, plab_things.Collidable):
   def __init__(self, curtain, character):
     """Constructor: list impassables, initialise direction."""
 
-    self.img = {(-2, 0): (145, 987, 341),
+    img = {(-2, 0): (145, 987, 341),
                   (-1, -1): (145, 987, 341),
                   (-1, 1): (145, 987, 341),
                   (0, -2): (145, 987, 341),
@@ -356,19 +356,23 @@ class CashDrape(plab_things.Drape, plab_things.Collidable):
                   (2, 0): (145, 987, 341),
                   }
 
+
     super(CashDrape, self).__init__(
-        curtain, character,)
+        img, curtain, character)
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
     # If the player has reached a coin, credit one reward and remove the coin
     # from the scrolling pattern. If the player has obtained all coins, quit!
     player_pattern_position = things['P'].position
 
-    if self.curtain[player_pattern_position]:
-      the_plot.log('Coin collected at {}!'.format(player_pattern_position))
-      the_plot.add_reward(100)
-      self.curtain[player_pattern_position] = False
-      if not self.curtain.any(): the_plot.terminate_episode()
+    for drape_coord in self.drape_list:
+        if self.is_colliding(things['P'], drape_coord):
+            the_plot.log('Coin collected at {}!'.format(player_pattern_position))
+            the_plot.add_reward(100)
+            self.curtain[drape_coord] = False
+            if not self.curtain.any(): the_plot.terminate_episode()
+            break
+
 
 
 def main(argv=()):

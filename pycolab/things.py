@@ -52,6 +52,7 @@ from __future__ import print_function
 import abc
 import collections
 import six
+import numpy as np
 
 
 class Backdrop(object):
@@ -155,7 +156,6 @@ class Backdrop(object):
   def palette(self):
     # Final. Do not override.
     return self._p_a_l_e_t_t_e
-
 
 @six.add_metaclass(abc.ABCMeta)
 class Drape(object):
@@ -390,6 +390,20 @@ class Sprite(object):
   def visible(self):
     return self._visible
 
+@six.add_metaclass(abc.ABCMeta)
+class LargeDrape(Drape):
+
+  def __init__(self, img : dict, *args, **kwargs):
+    self.img = img
+    super(LargeDrape, self).__init__(*args, **kwargs)
+
+  @property
+  def drape_list(self) -> np.ndarray:
+    '''
+    Returns the drapes as a list of coordinates
+    :return:
+    '''
+    return np.argwhere(self.curtain)
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -398,39 +412,39 @@ class Collidable(object):
   Object that can detect collision between two Collidable objects
   '''
 
-  def is_colliding(self, target : 'Collidable'):
+  def is_colliding(self, target : 'Collidable', coord=None):
     """
     Check if target object overlaps with current object
     :param target: Another collidable object to check for collision
+          coord: override coordinate of self (mostly for drape)
     :return: True if any parts of the object overlaps with this object
     """
 
-    for px in self.absimg:
+    for px in self.absimg(coord):
       if target.is_pixel_colliding(px):
         return True
 
     return False
 
-  def is_pixel_colliding(self, pixel : (int, int)):
+  def is_pixel_colliding(self, pixel : (int, int), coord=None):
     """
     Helper method to check if another object is colliding with self.
     :param pixel: coordinate of the pixel
+          coord: override coordinate of self (mostly for drape)
     :return: True if the pixel overlaps with this object's image
     """
-    return pixel in self.absimg # pixel exists
+    return pixel in self.absimg(coord) # pixel exists
 
 
-
-  @property
-  def absimg(self) -> dict:
+  def absimg(self, coord=None) -> dict:
     '''
     Returns image of the object as absolute coordinates
 
     '''
-
+    if coord is None: coord = self._virtual_row, self._virtual_col
     absimg = {}
-    for coord, rgb in self.img.items():
-      abscoord = self._pos_rel2abs(coord)
+    for offset_coord, rgb in self.img.items():
+      abscoord = coord[0] + offset_coord[0], coord[1] + offset_coord[1]
       absimg[abscoord] = rgb
 
     return absimg
