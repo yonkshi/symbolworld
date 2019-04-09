@@ -389,3 +389,50 @@ class Sprite(object):
   @property
   def visible(self):
     return self._visible
+
+
+
+@six.add_metaclass(abc.ABCMeta)
+class Collidable(object):
+  '''
+  Object that can detect collision between two Collidable objects
+  '''
+
+  def is_colliding(self, target : 'Collidable'):
+    """
+    Check if target object overlaps with current object
+    :param target: Another collidable object to check for collision
+    :return: True if any parts of the object overlaps with this object
+    """
+
+    for px in self.absimg:
+      if target.is_pixel_colliding(px):
+        return True
+
+    return False
+
+  def is_pixel_colliding(self, pixel : (int, int)):
+    """
+    Helper method to check if another object is colliding with self.
+    :param pixel: coordinate of the pixel
+    :return: True if the pixel overlaps with this object's image
+    """
+    return pixel in self.absimg # pixel exists
+
+
+
+  @property
+  def absimg(self) -> dict:
+    '''
+    Returns image of the object as absolute coordinates
+
+    '''
+
+    absimg = {}
+    for coord, rgb in self.img.items():
+      abscoord = self._pos_rel2abs(coord)
+      absimg[abscoord] = rgb
+
+    return absimg
+
+
