@@ -1,7 +1,6 @@
-# The `pycolab` game engine.
+# The `symbolic_gridworld` environment based on `pycolab` game engine. (WIP)
 
-A highly-customisable gridworld game engine with some batteries included.
-Make your own gridworld games to test reinforcement learning agents!
+This is a heavily modified gridworld engine
 
 ## Play some games!
 

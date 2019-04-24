@@ -23,7 +23,7 @@ from __future__ import print_function
 from pycolab import things
 from pycolab.protocols import scrolling
 
-class LargerObject(things.Sprite, things.Collidable):
+class LargerObject(things.LargeSprite):
   """A base class for "maze walkers" (e.g. Pac-Man, Zelda, Sokoban).
 
   If your game shows a top-down view of a world where a character can go in all
@@ -149,8 +149,8 @@ class LargerObject(things.Sprite, things.Collidable):
   # Not technically a single-step motion.
   _STAY = (0, 0)
 
-  def __init__(self, corner, position, character, impassable,
-               img,
+  def __init__(self, img, corner, position, character, impassable,
+
                confined_to_board=False,
                egocentric_scroller=False,
                scrolling_group=''):
@@ -182,7 +182,7 @@ class LargerObject(things.Sprite, things.Collidable):
       ValueError: `impassable` contains the character that represents this
           `MazeWalker` on the game board.
     """
-    super(LargerObject, self).__init__(corner, position, character)
+    super(LargerObject, self).__init__(img, corner, position, character)
     _character_check(impassable, 'impassable', 'the MazeWalker constructor')
     if character in impassable:
       raise ValueError('A MazeWalker must not designate its own character {} '
@@ -197,7 +197,6 @@ class LargerObject(things.Sprite, things.Collidable):
     # These coordinates are always relative to the board's origin at (0, 0), but
     # they are allowed to range beyond the bounds of the board.
     self._virtual_row, self._virtual_col = position
-    self.img = img
 
     # When the MazeWalker leaves the board, this will hold the visibility it
     # had just before it left. Unless overridden, the default behaviour is for

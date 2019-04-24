@@ -30,6 +30,7 @@ from pycolab.protocols import logging as plab_logging
 import six
 
 
+
 class CursesUi(object):
   """A terminal-based UI for pycolab games."""
 
@@ -172,7 +173,7 @@ class CursesUi(object):
       raise TypeError('The croppers argument to the CursesUi constructor must '
                       'be a sequence or None, not a "bare" object.')
 
-  def play(self, game):
+  def play(self, game): # FIXME Game play component, non render related
     """Play a pycolab game.
 
     Calling this method initialises curses and starts an interaction loop. The
@@ -209,7 +210,7 @@ class CursesUi(object):
     self._start_time = None
     self._total_return = None
 
-  def _init_curses_and_play(self, screen):
+  def _init_curses_and_play(self, screen): # FIXME Game play component, non pre-render related
     """Set up an already-running curses; do interaction loop.
 
     This method is intended to be passed as an argument to `curses.wrapper`,
@@ -309,7 +310,7 @@ class CursesUi(object):
       # Show the screen to the user.
       curses.doupdate()
 
-  def _display(self, screen, observations, score, elapsed):
+  def _display(self, screen, observations, score, elapsed): # FIXME Game play component, non render related
     """Redraw the game board onto the screen, with elapsed time and score.
 
     Args:
@@ -344,7 +345,7 @@ class CursesUi(object):
     # Redraw the game screen (but in the curses memory buffer only).
     screen.noutrefresh()
 
-  def _update_game_console(self, new_log_messages, console, paint_console):
+  def _update_game_console(self, new_log_messages, console, paint_console): # FIXME Game play component, non render related
     """Update game console text buffer; draw console to the screen if enabled.
 
     Args:
@@ -428,7 +429,7 @@ class CursesUi(object):
     colour_ids = dict(zip(colours, ids))
 
     # Program these colours into curses.
-    for colour, cid in six.iteritems(colour_ids):
+    for colour, cid in six.iteritems(colour_ids): #FIXME This is where color allocation happens
       curses.init_color(cid, *colour)
 
     # Now add the default colours to the colour-to-ID map.
@@ -454,6 +455,32 @@ class CursesUi(object):
       cpair_fg_id = colour_ids[cpair_fg]
       cpair_bg_id = colour_ids[cpair_bg]
       curses.init_pair(pid, cpair_fg_id, cpair_bg_id)
+
+class SymbolicCursesUI(CursesUi):
+  """ Wrapper class for CursesUI, supports large symbolic objects (objects that take up more than one grid space) """
+
+  def __init__(self,
+               objects,
+               keys_to_actions, delay=None,
+               repainter=None,
+               croppers=None):
+    colors = self._extract_colors(objects)
+    super().__init__(keys_to_actions, delay, repainter, colour_fg = colors, colour_bg =None, croppers = croppers)
+
+
+  def _extract_colors(self, objects) -> list:
+    '''
+    Extracts unique colors from a list of interface objects
+    :param objects: array of objects with ILarge interface
+    :return:
+    '''
+    colors = []
+    for obj in objects:
+      colors.extend(obj)
+
+    # unique colors only
+    return list(set(colors))
+
 
 
 def _format_timedelta(timedelta):

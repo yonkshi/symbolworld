@@ -562,12 +562,11 @@ class Engine(object):
 
     # Construct the game's observation renderer.
     chars = set(self._sprites_and_drapes.keys()).union(self._backdrop.palette)
-    if self._occlusion_in_layers:
-      self._renderer = rendering.BaseObservationRenderer(
-          self._rows, self._cols, chars)
-    else:
-      self._renderer = rendering.BaseUnoccludedObservationRenderer(
-          self._rows, self._cols, chars)
+
+    # Note: The original renderer had occlusion setting, it's not implemented in this Symbolic gridworld
+    self._renderer = rendering.SymbolicObservationRenderer(
+        self._rows, self._cols, chars)
+
 
     # Render a "pre-initial" board rendering from all of the data in the
     # Engine's Backdrop, Sprites, and Drapes. This rendering is only used as
@@ -719,7 +718,7 @@ class Engine(object):
     # or it belongs to the first update group, depending on how you look at it.
     self._the_plot.update_group = None
     self._backdrop.update(actions,
-                          self._board.board, self._board.layers,
+                          self._board.symbolic_board, self._board.layers,
                           self._sprites_and_drapes, self._the_plot)
 
     # Now we proceed through each of the update groups in the prescribed order.
@@ -728,7 +727,7 @@ class Engine(object):
       self._the_plot.update_group = update_group
       for entity in entities:
         entity.update(actions,
-                      self._board.board, self._board.layers,
+                      self._board.symbolic_board, self._board.layers,
                       self._backdrop, self._sprites_and_drapes, self._the_plot)
 
       # Next, repaint the board to reflect the updates from this update group.
@@ -747,16 +746,18 @@ class Engine(object):
     in which they appear in `self._sprites_and_drapes`
     """
     self._renderer.clear()
+    # TODO Add backdrop support, it's currently not rendering backdrop
     self._renderer.paint_all_of(self._backdrop.curtain)
     for character, entity in six.iteritems(self._sprites_and_drapes):
       # By now we should have checked fairly carefully that all entities in
       # _sprites_and_drapes are Sprites or Drapes.
       if isinstance(entity, things.Sprite) and entity.visible:
-        self._renderer.paint_sprite(character, entity.position)
+        self._renderer.paint_sprite(character, entity.position, entity)
       elif isinstance(entity, things.Drape):
-        self._renderer.paint_drape(character, entity.curtain)
+        self._renderer.paint_drape(character, entity.curtain, entity)
     # Done with all the layers; render the board!
     self._board = self._renderer.render()
+
 
   def _apply_and_clear_plot(self):
     """Apply directives to this `Engine` found in its `Plot` object.

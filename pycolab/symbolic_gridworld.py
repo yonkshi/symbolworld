@@ -5,17 +5,16 @@ The goal of the this environment is to test generalization and symbol extraction
 
 Todo list: (Ordered by importance)
 
-# TODO(!!!)  Multiple pixel objects
-    objects can take up more than 1 pixel, and interact in all those grid.
-    # TODO: Collision / boundary (Player to Drape, Player to Adversary)
-    # TODO: Render larger object
-
 # TODO(!!!)  Objective generator
     Generate a graph of objectives. Such as keys, doors, multiple keys for different doors.
+
 # TODO(!!!)  Objective solver
     We need a deterministic solver to confirm that this map is actually solvable before dispatching to agent
+
+
 # TODO(!!)  Dynamics objects
     Objects change shape, color per round
+
 # TODO(!!)  Dynamic map size / walls
 
 # TODO(!!)  OpenAI GyM Compatibility
@@ -53,12 +52,12 @@ from __future__ import division
 from __future__ import print_function
 
 import curses
-
+from PyQt5.QtCore import Qt
 import sys
 
 from pycolab import ascii_art
 from pycolab import cropping
-from pycolab import human_ui
+from pycolab import human_ui_qt
 from pycolab import things as plab_things
 from pycolab.prefab_parts import sprites as prefab_sprites
 
@@ -84,13 +83,13 @@ MAZES_ART = [
     ['#########################################################################################',
      '#                                                                                       #',
      '#                                                                                       #',
-     '#       @                                                                               #',
+     '#       @                                                                @              #',
      '#                                                                                       #',
      '#                                                                                       #',
      '#                                                                                       #',
      '#                                                                                       #',
      '#                                                                                       #',
-     '#       P                                                                               #',
+     '#              P                                                                        #',
      '#                                                                                       #',
      '#                                                                                       #',
      '#                                                                                       #',
@@ -102,7 +101,7 @@ MAZES_ART = [
      '#                                                                                       #',
      '#                                                                                       #',
      '#                                                                                       #',
-     '#                                                                                       #',
+     '#                                                               @                       #',
      '#                                                                                       #',
      '#                                                                                       #',
      '#                                                                                       #',
@@ -182,7 +181,7 @@ MAZES_ART = [
      '   #   #                                           #   @@@@@@@@@@@   #       #   #   #   ',
      '   # @ ###########                                ##@@@@@@@@@@@@@@@@@##      #   #   #   ',
      '   #   # @  @  @ #                               ##@@@@@@@@@@@@@@@@@@@##     #   #   #   ',
-     '   # @ #  a      #                              ##@@@@@@@@@@@@@@@@@@@@@##    #   #   #   ',
+     '   # @ #  a      #                              ##@@@@@@@@Peyiang@@@@@@@@@@@@@##    #   #   #   ',
      '   #   #    b    #                             ##@@@@@@@@@@@@@@@@@@@@@@@##   #   #   #   ',
      '   # @ #      c  #                             ##@@@@@@@@@@@@@@@@@@@@@@@##   #   #   #   ',
      '   #   #######   #                              ##@@@@@@@@@@@@@@@@@@@@@##    #   #   #   ',
@@ -205,18 +204,6 @@ TEASER_CORNER = [(3, 9),    # For level 0
 STARTER_OFFSET = [(-2, -12),  # For level 0
                   (10, 0),    # For level 1
                   (-3, 0)]    # For level 2
-
-
-# These colours are only for humans to see in the CursesUi.
-COLOUR_FG = {' ': (0, 0, 0),        # Default black background
-             '@': (999, 862, 110),  # Shimmering golden coins
-             '#': (764, 0, 999),    # Walls of the maze
-             'P': (0, 999, 999),    # This is you, the player
-             'a': (999, 0, 780),    # Patroller A
-             'b': (145, 987, 341),  # Patroller B
-             'c': (987, 623, 145)}  # Patroller C
-
-COLOUR_BG = {'@': (0, 0, 0)}  # So the coins look like @ and not solid blocks.
 
 
 def make_game(level):
@@ -267,17 +254,17 @@ class PlayerSprite(prefab_sprites.LargerObject):
     """Constructor: just tells `MazeWalker` we can't walk through walls."""
 
     # Example of a 5 x 5 diamond, Key: relative position to center, Value: RGB value
-    img = {(-2, 0): (0, 999, 999),
-                  (-1, -1): (0, 999, 999),
-                  (-1, 1): (0, 999, 999),
-                  (0, -2): (0, 999, 999),
-                  (0, 2): (0, 999, 999),
-                  (1, -1): (0, 999, 999),
-                  (1, 1): (0, 999, 999),
-                  (2, 0): (0, 999, 999),
+    img = {(-2, 0): (0, 0, 255),
+                  (-1, -1): (0, 0, 255),
+                  (-1, 1): (0, 0, 255),
+                  (0, -2): (0, 0, 255),
+                  (0, 2): (0, 0, 255),
+                  (1, -1): (0, 0, 255),
+                  (1, 1): (0, 0, 255),
+                  (2, 0): (0, 0, 255),
                   }
     super(PlayerSprite, self).__init__(
-        corner, position, character, img=img, impassable='#')
+        img, corner, position, character, impassable='#')
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
     del backdrop, things, layers  # Unused
@@ -302,18 +289,18 @@ class PatrollerSprite(prefab_sprites.LargerObject):
   def __init__(self, corner, position, character):
     """Constructor: list impassables, initialise direction."""
 
-    img = {(-2, 0): (145, 987, 341),
-                  (-1, -1): (145, 987, 341),
-                  (-1, 1): (145, 987, 341),
-                  (0, -2): (145, 987, 341),
-                  (0, 2): (145, 987, 341),
-                  (1, -1): (145, 987, 341),
-                  (1, 1): (145, 987, 341),
-                  (2, 0): (145, 987, 341),
+    img = {(-2, 0): (255, 0, 0),
+                  (-1, -1): (255, 0, 0),
+                  (-1, 1): (255, 0, 0),
+                  (0, -2): (255, 0, 0),
+                  (0, 2): (255, 0, 0),
+                  (1, -1): (255, 0, 0),
+                  (1, 1): (255, 0, 0),
+                  (2, 0): (255, 0, 0),
                   }
 
     super(PatrollerSprite, self).__init__(
-        corner, position, character, img=img, impassable='#')
+        img, corner, position, character, impassable='#')
     # Choose our initial direction based on our character value.
     self._moving_east = False
 
@@ -337,7 +324,7 @@ class PatrollerSprite(prefab_sprites.LargerObject):
     if self.is_colliding(things['P']): the_plot.terminate_episode()
 
 
-class CashDrape(plab_things.LargeDrape, plab_things.Collidable):
+class CashDrape(plab_things.LargeDrape, plab_things.ILarge):
   """A `Drape` handling all of the coins.
 
   This Drape detects when a player traverses a coin, removing the coin and
@@ -346,14 +333,14 @@ class CashDrape(plab_things.LargeDrape, plab_things.Collidable):
   def __init__(self, curtain, character):
     """Constructor: list impassables, initialise direction."""
 
-    img = {(-2, 0): (145, 987, 341),
-                  (-1, -1): (145, 987, 341),
-                  (-1, 1): (145, 987, 341),
-                  (0, -2): (145, 987, 341),
-                  (0, 2): (145, 987, 341),
-                  (1, -1): (145, 987, 341),
-                  (1, 1): (145, 987, 341),
-                  (2, 0): (145, 987, 341),
+    img = {(-2, 0): (0, 255, 0),
+                  (-1, -1): (0, 255, 0),
+                  (-1, 1): (0, 255, 0),
+                  (0, -2): (0, 255, 0),
+                  (0, 2): (0, 255, 0),
+                  (1, -1): (0, 255, 0),
+                  (1, 1): (0, 255, 0),
+                  (2, 0): (0, 255, 0),
                   }
 
 
@@ -369,7 +356,7 @@ class CashDrape(plab_things.LargeDrape, plab_things.Collidable):
         if self.is_colliding(things['P'], drape_coord):
             the_plot.log('Coin collected at {}!'.format(player_pattern_position))
             the_plot.add_reward(100)
-            self.curtain[drape_coord] = False
+            self.curtain[drape_coord[0], drape_coord[1]] = False
             if not self.curtain.any(): the_plot.terminate_episode()
             break
 
@@ -380,16 +367,20 @@ def main(argv=()):
 
   # Build a Better Scrolly Maze game.
   game = make_game(level)
+
   # Build the croppers we'll use to scroll around in it, etc.
   croppers = make_croppers(level)
 
   # Make a CursesUi to play it with.
-  ui = human_ui.CursesUi(
-      keys_to_actions={curses.KEY_UP: 0, curses.KEY_DOWN: 1,
-                       curses.KEY_LEFT: 2, curses.KEY_RIGHT: 3,
+  ui = human_ui_qt.HumanUI(
+      rows = 46,
+      cols = 89,
+
+      keys_to_actions={Qt.Key_Up: 0, Qt.Key_Down: 1,
+                       Qt.Key_Left: 2, Qt.Key_Right: 3,
                        -1: 4,
-                       'q': 5, 'Q': 5},
-      delay=100, colour_fg=COLOUR_FG, colour_bg=COLOUR_BG,
+                       Qt.Key_Q: 5},
+      delay=100,
       #croppers=level
   )
 

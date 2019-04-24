@@ -24,8 +24,10 @@ import collections
 import numpy as np
 import six
 
+from pycolab import things
 
-class Observation(collections.namedtuple('Observation', ['board', 'layers'])):
+
+class Observation(collections.namedtuple('Observation', ['board', 'symbolic_board','layers'])):
   """A container for pycolab observations.
 
   Natively, the pycolab engine renders observations as one of these objects
@@ -183,6 +185,150 @@ class BaseObservationRenderer(object):
     """The 2-D dimensions of this `BaseObservationRenderer`."""
     return self._board.shape
 
+class SymbolicObservationRenderer(object):
+  """Renderer of Symbolic observations.
+
+  This class renders the most basic form of pycolab observations, which are
+  described in some detail in the docstring for `Observation`. Every `Engine`
+  will create its observations with an instance of this class.
+
+  A `BaseObservationRenderer` is a stateful object that might be imagined like
+  a canvas. Rendering an observation proceeds in the following pattern:
+
+  1. Clear the canvas with the `clear()` method.
+  2. Paint `Backdrop`, `Sprite`, and `Drape` data onto the canvas via the
+     `paint*` methods, from back to front according to the z-order (`Backdrop`
+     first, of course).
+  3. Call the `render()` method to obtain the finished observation.
+  """
+
+  def __init__(self, rows, cols, characters):
+    """Construct a BaseObservationRenderer.
+
+    Args:
+      rows: height of the game board.
+      cols: width of the game board.
+      characters: an iterable of ASCII characters that are allowed to appear
+          on the game board. (A string will work as an argument here.)
+    """
+    self._board = np.zeros((rows, cols, 3), dtype=np.uint8) #rgb
+    self._symbolic_board = np.zeros((rows, cols), dtype=np.uint8)  # rgb
+    self._layers = {
+        char: np.zeros((rows, cols), dtype=np.bool_) for char in characters}
+
+  def clear(self):
+    """Reset the "canvas" of this `BaseObservationRenderer`.
+
+    After a `clear()`, a call to `render()` would return an `Observation` whose
+    `board` contains only `np.uint8(0)` values and whose layers contain only
+    `np.bool_(False)` values.
+    """
+    self._board.fill(0)
+
+  def paint_all_of(self, curtain):
+    """Copy a pattern onto the "canvas" of this `BaseObservationRenderer`.
+
+    Copies all of the characters from `curtain` onto this object's canvas,
+    overwriting any data underneath. This method is the usual means by which
+    `Backdrop` data is added to an observation.
+
+    Args:
+      curtain: a 2-D `np.uint8` array whose dimensions are the same as this
+          `BaseObservationRenderer`'s.
+    """
+    np.copyto(self._symbolic_board, curtain, casting='no')
+
+  def paint_sprite(self, character, position, entity:things.LargeSprite):
+    """Draw a character onto the "canvas" of this `BaseObservationRenderer`.
+
+    Draws `character` at row, column location `position` of this object's
+    canvas, overwriting any data underneath. This is the usual means by which
+    a `Sprite` is added to an observation.
+
+    Args:
+      character: a string of length 1 containing an ASCII character.
+      position: a length-2 indexable whose values are the row and column where
+          `character` should be drawn on the canvas.
+
+    Raises:
+      ValueError: `character` is not a valid character for this game, according
+          to the `Engine`'s configuration.
+    """
+    if character not in self._layers:
+      raise ValueError('character {} does not seem to be a valid character for '
+                       'this game'.format(str(character)))
+
+    img = entity.absimg(position)
+    keys = list(img.keys())
+    values = list(img.values())
+    row_indices, col_indices = zip(*keys)
+
+
+    what = self._board[row_indices, col_indices ]
+    self._board[row_indices, col_indices] = values # TODO Check if this works
+
+    self._symbolic_board[tuple(position)] = ord(character)
+
+  def paint_drape(self, character, curtain, entity:things.LargeDrape):
+    """Fill a masked area on the "canvas" of this `BaseObservationRenderer`.
+
+    Places `character` into all non-False locations in the binary mask
+    `curtain`, overwriting any data underneath. This is the usual means by which
+    a `Drape` is added to an observation.
+
+    Args:
+      character: a string of length 1 containing an ASCII character.
+      curtain: a 2-D `np.bool_` array whose dimensions are the same as this
+          `BaseObservationRenderer`s.
+
+    Raises:
+      ValueError: `character` is not a valid character for this game, according
+          to the `Engine`'s configuration.
+    """
+    if character not in self._layers:
+      raise ValueError('character {} does not seem to be a valid character for '
+                       'this game'.format(str(character)))
+
+    drapelist = entity.drape_list
+    for drape_loc in drapelist:
+      img = entity.absimg(drape_loc)
+      keys = img.keys()
+      values = list(img.values())
+      row_indices, col_indices = zip(*keys)
+      self._board[row_indices, col_indices] = values
+
+
+    self._symbolic_board[curtain] = ord(character)
+
+  def render(self):
+    """Derive an `Observation` from this `BaseObservationRenderer`'s "canvas".
+
+    Reminders: the values in the returned `Observation` should be accessed in
+    a *read-only* manner exclusively; furthermore, if any
+    `BaseObservationRenderer` method is called after `render()`, the contents
+    of the `Observation` returned in that `render()` call are *undefined*
+    (i.e. not guaranteed to be anything---they could be blank, random garbage,
+    whatever).
+
+    Returns:
+      An `Observation` whose data members are derived from the information
+      presented to this `BaseObservationRenderer` since the last call to its
+      `clear()` method.
+    """
+    for character, layer in six.iteritems(self._layers):
+      np.equal(self._symbolic_board, ord(character), out=layer)
+
+    return Observation(board=self._board, symbolic_board=self._symbolic_board, layers=self._layers)
+
+  @property
+  def shape(self):
+    """The 2-D dimensions of this `BaseObservationRenderer`."""
+    return self._board.shape
+
+  def printa(self):
+    import matplotlib.pyplot as plt
+    plt.imshow(self._board)
+    plt.show()
 
 class BaseUnoccludedObservationRenderer(object):
   """Renderer of "base" pycolab observations.

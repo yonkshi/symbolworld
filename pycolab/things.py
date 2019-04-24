@@ -390,29 +390,15 @@ class Sprite(object):
   def visible(self):
     return self._visible
 
-@six.add_metaclass(abc.ABCMeta)
-class LargeDrape(Drape):
-
-  def __init__(self, img : dict, *args, **kwargs):
-    self.img = img
-    super(LargeDrape, self).__init__(*args, **kwargs)
-
-  @property
-  def drape_list(self) -> np.ndarray:
-    '''
-    Returns the drapes as a list of coordinates
-    :return:
-    '''
-    return np.argwhere(self.curtain)
-
 
 @six.add_metaclass(abc.ABCMeta)
-class Collidable(object):
+class ILarge(object):
   '''
-  Object that can detect collision between two Collidable objects
+  Interface class for large objects, including collision detection,
   '''
+  # TODO Refactor constructor support for multiple inheritance
 
-  def is_colliding(self, target : 'Collidable', coord=None):
+  def is_colliding(self, target : 'ILarge', coord=None):
     """
     Check if target object overlaps with current object
     :param target: Another collidable object to check for collision
@@ -446,7 +432,44 @@ class Collidable(object):
     for offset_coord, rgb in self.img.items():
       abscoord = coord[0] + offset_coord[0], coord[1] + offset_coord[1]
       absimg[abscoord] = rgb
-
     return absimg
+
+  @property
+  def colors(self) -> list:
+    '''
+    Returns a list of unique colors used in this object
+    :return:
+    '''
+
+    # Return a unique list
+    return list(set([ rgb for _, rgb in self.img]))
+
+@six.add_metaclass(abc.ABCMeta)
+class LargeDrape(Drape, ILarge):
+  '''
+  Wrapper class for Drape object, extending its capability for large sprites
+  '''
+
+  def __init__(self, img : dict, *args, **kwargs):
+    self.img = img
+    super(LargeDrape, self).__init__(*args, **kwargs)
+
+  @property
+  def drape_list(self) -> np.ndarray:
+    '''
+    Returns the drapes as a list of coordinates
+    :return:
+    '''
+    return np.argwhere(self.curtain)
+
+
+@six.add_metaclass(abc.ABCMeta)
+class LargeSprite(Sprite, ILarge):
+  '''
+  Wrapper class for Sprite object, extending its capability for large sprites
+  '''
+  def __init__(self, img : dict, *args, **kwargs):
+    self.img = img
+    super(LargeSprite, self).__init__(*args, **kwargs)
 
 
