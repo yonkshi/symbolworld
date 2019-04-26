@@ -211,7 +211,7 @@ class SymbolicObservationRenderer(object):
       characters: an iterable of ASCII characters that are allowed to appear
           on the game board. (A string will work as an argument here.)
     """
-    self._board = np.zeros((rows, cols, 3), dtype=np.uint8) #rgb
+    self._board = np.zeros((rows, cols, 3), dtype='uint8')#rgb
     self._symbolic_board = np.zeros((rows, cols), dtype=np.uint8)  # rgb
     self._layers = {
         char: np.zeros((rows, cols), dtype=np.bool_) for char in characters}

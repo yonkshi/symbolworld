@@ -68,12 +68,12 @@ from pycolab.plot import Plot
 from pycolab.level_generator import generate_level
 from pycolab.config import *
 
-LEVEL = generate_level()
-def make_game():
+
+def make_game(init_board):
     """Builds and returns a Better Scrolly Maze game for the selected level."""
 
     return ascii_art.ascii_art_to_game(
-        LEVEL, what_lies_beneath=' ',
+        init_board, what_lies_beneath=' ',
         sprites={
             'P': PlayerSprite,
             'a': PatrollerSprite,
@@ -273,10 +273,10 @@ class SimpleSymbolWorldEnv(gym.Env):
     # Enumeration of possible actions
     class Actions(IntEnum):
         # Turn left, turn right, move forward
-        left = 0
-        up = 1
-        right = 2
-        down = 3
+        up = 0
+        down = 1
+        left = 2
+        right = 3
 
         # Drop an object
         stay = -1
@@ -317,7 +317,11 @@ class SimpleSymbolWorldEnv(gym.Env):
         return obs, reward, self._game_engine.game_over, None
 
     def reset(self):
-        self._game_engine = make_game()
+        reset_colors()
+        init_gameboard = generate_level()
+        self._game_engine = make_game(init_gameboard)
+        self.obs, _, _ = self._game_engine.its_showtime()
+
         pass
 
     def render(self, mode='rgb_array'):
@@ -325,7 +329,7 @@ class SimpleSymbolWorldEnv(gym.Env):
             return self.obs
 
         elif mode == 'human':
-            return self.human_ui.display(self.obs, 0, 0)
+            return self.human_ui.display([self.obs], 0, 0) # quirk in obs, original display takes cropper
 
 
 
@@ -346,7 +350,8 @@ def reset_colors():
 def main(argv=()):
 
     # Build a Better Scrolly Maze game.
-    game = make_game()
+    init_gameboard = generate_level()
+    game = make_game(init_gameboard)
 
     rows = len(LEVEL)
     cols = len(LEVEL[0])

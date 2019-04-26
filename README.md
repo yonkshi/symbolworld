@@ -1,6 +1,7 @@
-# The `symbolic_gridworld` environment based on `pycolab` game engine. (WIP)
+# The `SymbolWorld` engine `pycolab` game engine - heavily modified gridworld environment. (WIP)
 
-This is a heavily modified gridworld engine
+This is a heavily modified gridworld engine that allows developers to quickly build
+ discrete but multiple symbols 
 
 ## Play some games!
 

@@ -758,6 +758,10 @@ class Engine(object):
     # Done with all the layers; render the board!
     self._board = self._renderer.render()
 
+  @property
+  def board(self):
+      return self._board
+
 
   def _apply_and_clear_plot(self):
     """Apply directives to this `Engine` found in its `Plot` object.

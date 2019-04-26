@@ -13,10 +13,9 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QTextEdit
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QFrame
 
 
-# TODO move this somewhere else
-CELL_PIXELS = 10
 from pycolab import cropping
 from pycolab.protocols import logging as plab_logging
+from pycolab.config import CELL_PIXELS
 
 class Window(QMainWindow):
     """
@@ -113,8 +112,8 @@ class HumanUIRenderer:
         self.width = width
         self.height = height
 
-        self.img = QImage(width, height, QImage.Format_RGB888)
-        self.painter = QPainter()
+        # self.img = QImage(width, height, QImage.Format_RGB888)
+        # self.painter = QPainter()
 
         self.app = QApplication([])
         self.window = Window()
@@ -147,6 +146,10 @@ class HumanUIRenderer:
 
     def getPixmap(self):
         return QPixmap.fromImage(self.img)
+
+    def paintPixmap(self, pxmap):
+        self.window.setPixmap(pxmap)
+        self.app.processEvents()
 
     def getArray(self):
         """
@@ -206,9 +209,10 @@ class HumanUIRenderer:
 
     def fillRect(self, x, y, width, height, color):
         # Hard code alpha into colors
-        self.painter.fillRect(QRect(x, y, width, height), QColor(*color, 99))
+        self.painter.fillRect(QRect(x, y, width, height), QColor(*color, 200))
 
 class HumanUI:
+
     def __init__(self, rows, cols,
                  delay,
                  croppers = None,
@@ -297,7 +301,7 @@ class HumanUI:
         observation, reward, _ = self._game.its_showtime()
         self.observations = self._crop_and_repaint(observation)
         self._total_return = reward
-        self._display(
+        self.display(
             self.observations, self._total_return, elapsed=datetime.timedelta())
         self.qt_renderer.window.setKeyDownCb(self._key_down_cb)
         # Oh boy, play the game!
@@ -306,7 +310,7 @@ class HumanUI:
             time.sleep(self._delay / 1000.0)
 
             observation, reward, _ = self._game.play(4) # Do nothing # TODO make do nothing more generalized
-            self._display(
+            self.display(
                 self.observations, self._total_return, elapsed=datetime.timedelta())
 
             # If the window was closed
@@ -316,7 +320,7 @@ class HumanUI:
             # Update the game display, regardless of whether we've called the game's
             # play() method.
             elapsed = datetime.datetime.now() - self._start_time
-            self._display(self.observations, self._total_return, elapsed)
+            self.display(self.observations, self._total_return, elapsed)
 
             # TODO Add logging support
 
@@ -355,7 +359,7 @@ class HumanUI:
                 self._total_return += reward
 
             elapsed = datetime.datetime.now() - self._start_time
-            self._display(self.observations, self._total_return, elapsed)
+            self.display(self.observations, self._total_return, elapsed)
 
 
 
@@ -372,7 +376,7 @@ class HumanUI:
 
         # End drawing grid
 
-    def _display(self, observations, score, elapsed):
+    def display(self, observations, score, elapsed):
         """Redraw the game board onto the screen, with elapsed time and score.
 
         Args:
@@ -399,7 +403,6 @@ class HumanUI:
             assert board.shape[1] == self.cols
 
             if self.qt_renderer is None:
-                from gym_minigrid.rendering import Renderer
                 self.qt_renderer = HumanUIRenderer(
                     width=self.cols * CELL_PIXELS,
                     height=self.rows * CELL_PIXELS,
@@ -409,52 +412,61 @@ class HumanUI:
 
             # if r.window:
             #     r.window.setText("Hi I am Yonk")
+            #board = np.transpose(board, (1, 0, 2)).copy()
+            # board = np.ones([50, 50, 3], dtype='uint8')
+            # board[25, 25, 0] = 255
+            qimg = QImage(board, board.shape[1], board.shape[0], board.shape[1] * 3,  QImage.Format_RGB888)
+            pixmap = QPixmap(qimg)
+            pixmap = pixmap.scaled(300, 300, Qt.KeepAspectRatio)
+            r.paintPixmap(pixmap)
+            r.app.processEvents()
+            # r.beginFrame()
+            #
+            # # Render grid
+            # # Total grid size at native scale
+            #
+            # widthPx = self.cols * CELL_PIXELS
+            # heightPx = self.rows * CELL_PIXELS
+            #
+            # r.push()
+            #
+            # r.fillRect(
+            #     0,
+            #     0,
+            #     widthPx,
+            #     heightPx,
+            #     (0,0,0), #black color
+            # )
+            # # Draw grid lines
+            # r.setLineColor(33, 33, 33)
+            # for rowIdx in range(0, self.rows):
+            #     y = CELL_PIXELS * rowIdx
+            #     r.drawLine(0, y, widthPx, y)
+            # for colIdx in range(0, self.cols):
+            #     x = CELL_PIXELS * colIdx
+            #     r.drawLine(x, 0, x, heightPx)
+            #
+            # r.pop()
+            #
+            # # Render each cell
+            # # TODO More efficient rendering, render as bitmap frames
+            # for row, row_data in enumerate(board):
+            #     for cell, color in enumerate(row_data):
+            #         # Highlight the cell
+            #         r.fillRect(
+            #             cell * CELL_PIXELS,
+            #             row * CELL_PIXELS,
+            #             CELL_PIXELS,
+            #             CELL_PIXELS,
+            #             color
+            #         )
+            #
+            # r.endFrame()
 
-            r.beginFrame()
+            # self._update_console(
+            #     plab_logging.consume(self._game.the_plot))
 
-            # Render grid
-            # Total grid size at native scale
-
-            widthPx = self.cols * CELL_PIXELS
-            heightPx = self.rows * CELL_PIXELS
-
-            r.push()
-
-            r.fillRect(
-                0,
-                0,
-                widthPx,
-                heightPx,
-                (0,0,0), #black color
-            )
-            # Draw grid lines
-            r.setLineColor(33, 33, 33)
-            for rowIdx in range(0, self.rows):
-                y = CELL_PIXELS * rowIdx
-                r.drawLine(0, y, widthPx, y)
-            for colIdx in range(0, self.cols):
-                x = CELL_PIXELS * colIdx
-                r.drawLine(x, 0, x, heightPx)
-
-            r.pop()
-
-            # Render each cell
-            # TODO More efficient rendering, render as bitmap frames
-            for row, row_data in enumerate(board):
-                for cell, color in enumerate(row_data):
-                    # Highlight the cell
-                    r.fillRect(
-                        cell * CELL_PIXELS,
-                        row * CELL_PIXELS,
-                        CELL_PIXELS,
-                        CELL_PIXELS,
-                        color
-                    )
-
-            r.endFrame()
-
-            self._update_console(
-                plab_logging.consume(self._game.the_plot))
+            return r
 
     def _update_console(self, messagees):
         '''
